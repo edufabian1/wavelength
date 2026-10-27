@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F4EFE4">
+<title>Wavelength</title>
+<style>
+  :root{
+    --mint:#9FD8C0;
+    --blue:#1B4B8F;
+    --blue-2:#143C74;
+    --paper:#F4EFE4;
+    --ink:#20222A;
+    --shadow: 0 30px 55px -28px rgba(30,22,10,.6), 0 10px 22px -14px rgba(30,22,10,.45);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+
+  body{
+    margin:0;
+    min-height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content: safe center;
+    gap:18px;
+    padding:22px 16px 30px;
+    background:
+      radial-gradient(120% 90% at 50% 0%, #FFFDF7 0%, var(--paper) 45%, #E5DCC9 100%);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- Encabezado ---------- */
+  .head{ text-align:center; }
+  .head h1{
+    margin:0;
+    font-size:clamp(15px, 3vw, 19px);
+    letter-spacing:.26em;
+    text-transform:uppercase;
+    font-weight:800;
+    color:#2B2E38;
+    text-indent:.26em;
+  }
+  /* ---------- Aparato ---------- */
+  .device{
+    position:relative;
+    width:min(560px, 94vw);
+    border-radius:24px;
+    padding:14px;
+    background:
+      repeating-linear-gradient(90deg,
+        #2E6DB4 0 24px, #B5739B 24px 48px, #8FBF6A 48px 72px,
+        #C0503F 72px 96px, #E8DFC8 96px 120px, #1F2C4E 120px 144px,
+        #E0A23C 144px 168px, #6FA9A0 168px 192px);
+    box-shadow: var(--shadow);
+  }
+  .device::after{
+    content:"";
+    position:absolute; inset:0;
+    border-radius:inherit;
+    background:linear-gradient(180deg, rgba(255,255,255,.3), rgba(0,0,0,.22));
+    pointer-events:none;
+    mix-blend-mode:overlay;
+  }
+
+  .deck{
+    position:relative;
+    border-radius:14px;
+    background: linear-gradient(180deg, #245695 0%, var(--blue) 45%, var(--blue-2) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.3),
+      inset 0 -3px 0 rgba(0,0,0,.25);
+    padding:0 14px 16px;
+    overflow:hidden;
+  }
+
+  .dial{
+    position:relative;
+    flex:1;
+    min-width:0;
+  }
+  .dial svg{
+    display:block;
+    width:100%;
+    height:auto;
+    touch-action:none;
+    cursor:grab;
+  }
+  .dial svg.is-dragging{ cursor:grabbing; }
+
+  /* desenfoque de movimiento del aro mientras gira (no revela ninguna posición) */
+  #rim{ transition:filter .3s ease-out; }
+  #rim.is-spinning{ filter:blur(1.6px); }
+
+  /* ---------- Controles ---------- */
+  .controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:9px;
+    justify-content:center;
+    margin-top:18px;
+  }
+
+  .btn{
+    -webkit-appearance:none;
+    appearance:none;
+    border:0;
+    font:inherit;
+    font-weight:700;
+    font-size:14.5px;
+    letter-spacing:.02em;
+    padding:11px 19px;
+    border-radius:999px;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    cursor:pointer;
+    color:#fff;
+    background:linear-gradient(180deg,#2B3A63,#16203A);
+    box-shadow:0 2px 0 #0C1426, 0 8px 16px -10px rgba(0,0,0,.9);
+    transition:transform .12s ease, box-shadow .12s ease, filter .15s ease;
+    user-select:none;
+  }
+  .btn:hover{ filter:brightness(1.12); }
+  .btn:active{ transform:translateY(2px); box-shadow:0 1px 0 #0C1426, 0 4px 10px -10px rgba(0,0,0,.9); }
+  .btn:focus-visible{ outline:3px solid #F0B42C; outline-offset:3px; }
+  .btn:disabled{ opacity:.55; cursor:default; }
+
+  .btn--primary{
+    background:linear-gradient(180deg,#E0574A,#B32B23);
+    box-shadow:0 2px 0 #6F120E, 0 8px 16px -10px rgba(0,0,0,.9);
+  }
+  .btn--primary:active{ box-shadow:0 1px 0 #6F120E, 0 4px 10px -10px rgba(0,0,0,.9); }
+
+  .btn--ghost{
+    background:rgba(255,255,255,.10);
+    box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.3);
+  }
+  .btn--ghost[aria-pressed="true"]{
+    background:rgba(159,216,192,.2);
+    box-shadow:inset 0 0 0 1.5px var(--mint);
+  }
+  .btn svg{ width:17px; height:17px; }
+
+  /* ---------- Palanca de ancho de zonas (lateral derecho) ---------- */
+  .board{
+    display:flex;
+    align-items:stretch;
+    margin:0 -14px;
+  }
+  .lever{
+    flex:none;
+    position:relative;
+    width:58px;
+    cursor:grab;
+    touch-action:none;
+    outline:none;
+    --t:.4375;   /* 85 %: el valor por defecto, antes de que arranque el script */
+  }
+  .lever:active{ cursor:grabbing; }
+  .lever:focus-visible .lever__handle{
+    outline:2.5px solid #F0B42C;
+    outline-offset:3px;
+  }
+
+  .lever__slot{
+    position:absolute;
+    left:50%;
+    top:24px;
+    bottom:24px;
+    width:14px;
+    margin-left:-7px;
+    border-radius:7px;
+    background:linear-gradient(180deg,#0A1120,#1B2949 60%,#0A1120);
+    box-shadow:inset 0 3px 6px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.18);
+  }
+
+  .lever__handle{
+    position:absolute;
+    left:50%;
+    width:34px;
+    height:46px;
+    margin-left:-17px;
+    bottom:calc(24px + (100% - 94px) * var(--t));
+    border-radius:10px;
+    background:linear-gradient(180deg,#EE6E5F 0%,#C8322B 46%,#85170F 100%);
+    border:1px solid #65100C;
+    box-shadow:0 5px 10px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.45);
+    transition:box-shadow .15s ease;
+  }
+  .lever:active .lever__handle{
+    box-shadow:0 2px 5px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.45);
+  }
+  .lever__handle::before{
+    content:"";
+    position:absolute;
+    left:8px; right:8px; top:15px;
+    height:2px;
+    border-radius:1px;
+    background:rgba(70,0,0,.4);
+    box-shadow:0 7px 0 rgba(70,0,0,.4);
+  }
+  .lever__handle::after{
+    content:"";
+    position:absolute;
+    left:5px; right:5px; top:4px;
+    height:9px;
+    border-radius:6px 6px 3px 3px;
+    background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,0));
+  }
+
+  .lever__icon{
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    width:22px;
+    height:11px;
+    stroke:rgba(255,255,255,.55);
+    stroke-width:1.8;
+    stroke-linecap:round;
+    fill:none;
+    pointer-events:none;
+  }
+  .lever__icon--top{ top:4px; }
+  .lever__icon--bottom{ bottom:4px; width:13px; }
+
+  /* la manija de la pantalla se arrastra en círculo */
+  #handle{ cursor:grab; }
+  #screen.is-dragging #handle{ cursor:grabbing; }
+
+  @media (max-width:520px){
+    body{ padding:16px 10px 26px; gap:14px; }
+    .device{ padding:10px; border-radius:20px; }
+    .deck{ padding:0 10px 12px; }
+    .board{ margin:0 -10px; }
+    .lever{ width:46px; }
+    .btn{ padding:10px 15px; font-size:13.5px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .btn{ transition:none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="head">
+  <h1>Wavelength</h1>
+</header>
+
+<div class="device">
+  <div class="deck">
+    <div class="board">
+      <div class="dial">
+        <svg id="dialSvg" viewBox="0 0 640 440" role="group"
+             aria-label="Dial de Wavelength. Arrastrá la aguja roja para marcar la posición.">
+          <defs>
+            <radialGradient id="hubGrad" cx="38%" cy="32%" r="72%">
+              <stop offset="0%" stop-color="#F0705F"/>
+              <stop offset="55%" stop-color="#C8322B"/>
+              <stop offset="100%" stop-color="#8E1B16"/>
+            </radialGradient>
+            <radialGradient id="discGrad" cx="50%" cy="14%" r="88%">
+              <stop offset="0%" stop-color="#223152"/>
+              <stop offset="100%" stop-color="#0F1728"/>
+            </radialGradient>
+            <linearGradient id="screenGrad" x1=".2" y1="0" x2=".8" y2="1">
+              <stop offset="0%" stop-color="#31456F"/>
+              <stop offset="55%" stop-color="#1D2B4B"/>
+              <stop offset="100%" stop-color="#141F35"/>
+            </linearGradient>
+            <linearGradient id="frontGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#20304F"/>
+              <stop offset="55%" stop-color="#182440"/>
+              <stop offset="100%" stop-color="#111A2E"/>
+            </linearGradient>
+            <linearGradient id="mintGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#D2F0E4"/>
+              <stop offset="100%" stop-color="#7FC3A9"/>
+            </linearGradient>
+            <filter id="softShadow" x="-40%" y="-40%" width="180%" height="180%">
+              <feDropShadow dx="0" dy="9" stdDeviation="9" flood-color="#000" flood-opacity=".55"/>
+            </filter>
+            <filter id="tipShadow" x="-60%" y="-60%" width="220%" height="220%">
+              <feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#000" flood-opacity=".5"/>
+            </filter>
+            <pattern id="speckle" width="64" height="64" patternUnits="userSpaceOnUse">
+              <circle cx="6" cy="9" r="1.1" fill="#fff" opacity=".55"/>
+              <circle cx="24" cy="3" r="0.8" fill="#fff" opacity=".38"/>
+              <circle cx="41" cy="14" r="1.3" fill="#fff" opacity=".6"/>
+              <circle cx="56" cy="5" r="0.9" fill="#fff" opacity=".32"/>
+              <circle cx="13" cy="28" r="1" fill="#fff" opacity=".45"/>
+              <circle cx="33" cy="33" r="0.7" fill="#fff" opacity=".3"/>
+              <circle cx="49" cy="26" r="1.2" fill="#fff" opacity=".5"/>
+              <circle cx="60" cy="37" r="0.8" fill="#fff" opacity=".28"/>
+              <circle cx="3" cy="45" r="1" fill="#fff" opacity=".4"/>
+              <circle cx="22" cy="52" r="1.3" fill="#fff" opacity=".5"/>
+              <circle cx="38" cy="47" r="0.8" fill="#fff" opacity=".35"/>
+              <circle cx="55" cy="58" r="1.1" fill="#fff" opacity=".45"/>
+              <circle cx="8" cy="60" r="0.9" fill="#fff" opacity=".3"/>
+              <circle cx="45" cy="8" r="0.6" fill="#fff" opacity=".25"/>
+              <circle cx="30" cy="18" r="0.9" fill="#fff" opacity=".3"/>
+            </pattern>
+          </defs>
+
+          <!-- borde dentado: gira con la rueda, se ve aun con la pantalla cerrada -->
+          <g id="rim">
+            <circle cx="320" cy="300" r="252" fill="#DCD3BA" stroke="#B9AE93" stroke-width="2"/>
+            <circle cx="320" cy="300" r="252" fill="none" stroke="#8E856D" stroke-width="13"
+                    stroke-dasharray="5 9" opacity=".55"/>
+            <circle cx="320" cy="300" r="245" fill="#0E1526"/>
+          </g>
+
+          <!-- cuerpo -->
+          <circle cx="320" cy="300" r="242" fill="url(#discGrad)"/>
+          <circle cx="320" cy="300" r="242" fill="url(#speckle)" opacity=".45"/>
+
+          <!-- rueda con las bandas (gira) -->
+          <g id="wheel"></g>
+
+          <!-- pantalla que oculta (gira) -->
+          <g id="screen"></g>
+
+          <!-- frente del aparato: tapa la mitad inferior -->
+          <g id="front"></g>
+
+          <!-- aguja roja (gira) -->
+          <g id="pointer" filter="url(#tipShadow)">
+            <rect x="-6.5" y="-230" width="13" height="205" rx="6.5" fill="#C8322B"/>
+            <rect x="-2" y="-230" width="3" height="205" rx="1.5" fill="#F58B7E" opacity=".5"/>
+            <circle r="38" fill="url(#hubGrad)"/>
+            <circle r="38" fill="none" stroke="#6F120E" stroke-width="2" opacity=".55"/>
+            <circle r="25" fill="none" stroke="#fff" stroke-width="1.5" opacity=".15"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="lever" id="lever" role="slider" tabindex="0"
+           aria-label="Ancho de las zonas de puntaje"
+           aria-orientation="vertical"
+           aria-valuemin="50" aria-valuemax="130" aria-valuenow="85">
+        <div class="lever__slot"></div>
+        <svg class="lever__icon lever__icon--top" viewBox="0 0 22 11" aria-hidden="true">
+          <path d="M2 1v9M20 1v9M2 5.5h18"/>
+        </svg>
+        <svg class="lever__icon lever__icon--bottom" viewBox="0 0 13 11" aria-hidden="true">
+          <path d="M2 1v9M11 1v9M2 5.5h9"/>
+        </svg>
+        <div class="lever__handle"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn btn--primary" id="spin" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="4"/>
+          <circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" stroke="none"/>
+          <circle cx="15.5" cy="15.5" r="1.2" fill="currentColor" stroke="none"/>
+          <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/>
+        </svg>
+        Girar
+      </button>
+      <button class="btn btn--ghost" id="screenBtn" type="button" aria-pressed="false">
+        Revelar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* =================== configuración =================== */
+  const CX = 320, CY = 300;
+  const R_OUT = 236;      // borde externo de la banda de colores
+  const R_IN  = 176;      // borde interno
+  const R_DISC = 242;
+  const ARC = 84;         // medio arco visible (0 = arriba)
+  const POINTER_LIMIT = 87; // hasta dónde baja la aguja en los extremos
+  const R_TEXT = 214;
+  const STEP = 0.5;
+
+  // La banda ocupa ±32° al 100 %, con 5 zonas iguales: 2-3-4-3-2.
+  const ZONE_HALF = 32;
+
+  // 1 = ancho original; la palanca mueve entre 0.5x y 1.3x
+  let zoneScale = 0.85;
+
+  const scaledZones = () => {
+    const k = (ZONE_HALF / 5) * zoneScale;   // media zona
+    return [
+      { pts: 2, color: "#B5302A", from: -5 * k, to: -3 * k },
+      { pts: 3, color: "#E4762B", from: -3 * k, to: -1 * k },
+      { pts: 4, color: "#F0B42C", from: -1 * k, to:  1 * k },
+      { pts: 3, color: "#7FBED8", from:  1 * k, to:  3 * k },
+      { pts: 2, color: "#A3ABB0", from:  3 * k, to:  5 * k }
+    ];
+  };
+
+  const svg       = document.getElementById("dialSvg");
+  const wheelEl   = document.getElementById("wheel");
+  const screenEl  = document.getElementById("screen");
+  const pointerEl = document.getElementById("pointer");
+  const rimEl     = document.getElementById("rim");
+  const spinBtn   = document.getElementById("spin");
+  const screenBtn = document.getElementById("screenBtn");
+
+  /* =================== geometría =================== */
+  function polar(r, deg){
+    const a = (deg - 90) * Math.PI / 180;
+    return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
+  }
+  const pt = (r, deg) => polar(r, deg).map(n => n.toFixed(2)).join(" ");
+
+  function sector(a1, a2, r1, r2){
+    const big = (a2 - a1) > 180 ? 1 : 0;
+    return `M ${pt(r2, a1)}`
+         + ` A ${r2} ${r2} 0 ${big} 1 ${pt(r2, a2)}`
+         + ` L ${pt(r1, a2)}`
+         + ` A ${r1} ${r1} 0 ${big} 0 ${pt(r1, a1)} Z`;
+  }
+
+  /* =================== piezas =================== */
+  function buildWheel(){
+    const zones = scaledZones();
+    const bounds = [...new Set(zones.flatMap(z => [z.from, z.to]))].sort((a, b) => a - b);
+
+    let h = "";
+    // fondo crema de toda la banda (círculo completo: gira por detrás de la ventana)
+    h += `<path d="${sector(-179.5, 179.5, R_IN, R_OUT)}" fill="#EFE7D3"/>`;
+
+    for (const z of zones){
+      h += `<path d="${sector(z.from, z.to, R_IN, R_OUT)}" fill="${z.color}"/>`;
+    }
+
+    for (const d of bounds){
+      const [x1, y1] = polar(R_IN, d), [x2, y2] = polar(R_OUT, d);
+      h += `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"
+             stroke="#000" stroke-opacity=".2" stroke-width="1.2"/>`;
+    }
+
+    h += `<circle cx="${CX}" cy="${CY}" r="${R_OUT}" fill="none" stroke="#B3A88D" stroke-width="1.5"/>`;
+    h += `<circle cx="${CX}" cy="${CY}" r="${R_IN}" fill="none" stroke="#B3A88D" stroke-width="1.5"/>`;
+
+    for (const z of zones){
+      const mid = (z.from + z.to) / 2;
+      const [x, y] = polar(R_TEXT, mid);
+      h += `<text x="${x.toFixed(2)}" y="${y.toFixed(2)}"
+               transform="rotate(${mid.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)})"
+               text-anchor="middle" dominant-baseline="central"
+               font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif"
+               font-size="${Math.round(27 * Math.max(0.72, Math.min(1, zoneScale)))}" font-weight="800" fill="#6E1A15" opacity=".9">${z.pts}</text>`;
+    }
+
+    wheelEl.innerHTML = h;
+  }
+
+  function buildScreen(){
+    const r = R_DISC - 1;
+    const [x1, y1] = polar(r, 90);
+    const [x2, y2] = polar(r, 270);
+    const half = `M ${CX} ${CY} L ${x1.toFixed(2)} ${y1.toFixed(2)}`
+               + ` A ${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`;
+
+    screenEl.innerHTML =
+      `<g filter="url(#softShadow)" pointer-events="none">
+         <path d="${half}" fill="url(#screenGrad)"/>
+         <path d="${half}" fill="url(#speckle)" opacity=".5"/>
+         <path d="${half}" fill="none" stroke="#080E1A" stroke-width="2"/>
+         <path d="${half}" fill="none" stroke="#46608F" stroke-width="1" opacity=".55"
+               transform="translate(0 -2)"/>
+       </g>
+       <g id="handle">
+         <title>Manija de la pantalla: arrastrala en círculo para revelar</title>
+         <rect x="${(CX - 312)}" y="${(CY - 20)}" width="80" height="40" rx="20"
+               fill="none" pointer-events="all"/>
+         <rect x="${(CX - 302)}" y="${(CY - 10)}" width="70" height="20" rx="10"
+               fill="url(#mintGrad)" stroke="#4E8A76" stroke-width="1.5"/>
+         <rect x="${(CX - 314)}" y="${(CY - 15)}" width="22" height="30" rx="11"
+               fill="#8FCDB5" stroke="#4E8A76" stroke-width="1.5"/>
+       </g>`;
+  }
+
+  function buildFront(){
+    const r = R_DISC;
+    const half = `M ${CX} ${CY} L ${pt(r, 90)} A ${r} ${r} 0 0 1 ${pt(r, 270)} Z`;
+
+    document.getElementById("front").innerHTML =
+      `<path d="${half}" fill="url(#frontGrad)"/>
+       <path d="${half}" fill="url(#speckle)" opacity=".3"/>`;
+  }
+
+  /* =================== estado =================== */
+  const SCREEN_OPEN = 0, SCREEN_CLOSED = 180;
+  const state = { wheel:0, pointer:0, screen:SCREEN_CLOSED, closed:true, busy:false };
+  const anims = { wheel:null, screen:null };
+  let screenDrag = false;
+  let dragOffset = 0;   // diferencia entre el ángulo del puntero y el de la manija
+
+  function render(){
+    wheelEl.setAttribute("transform", `rotate(${state.wheel} ${CX} ${CY})`);
+    rimEl.setAttribute("transform", `rotate(${state.wheel} ${CX} ${CY})`);
+    screenEl.setAttribute("transform", `rotate(${state.screen} ${CX} ${CY})`);
+    pointerEl.setAttribute("transform", `translate(${CX} ${CY}) rotate(${state.pointer})`);
+  }
+
+  function tween(key, from, to, dur, ease, apply){
+    anims[key]?.cancel();
+    if (dur <= 0){ apply(to); return Promise.resolve(); }
+    return new Promise(resolve => {
+      const t0 = performance.now();
+      let raf = 0;
+      const step = now => {
+        const t = Math.min(1, (now - t0) / dur);
+        apply(from + (to - from) * ease(t));
+        if (t < 1) raf = requestAnimationFrame(step);
+        else { anims[key] = null; resolve(); }
+      };
+      raf = requestAnimationFrame(step);
+      anims[key] = { cancel(){ cancelAnimationFrame(raf); anims[key] = null; } };
+    });
+  }
+
+  const easeOutQuint   = t => 1 - Math.pow(1 - t, 5);
+  const easeOutCubic   = t => 1 - Math.pow(1 - t, 3);
+  const easeInOutCubic = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function syncScreenBtn(){
+    screenBtn.textContent = state.closed ? "Revelar" : "Ocultar";
+    screenBtn.setAttribute("aria-pressed", String(!state.closed));
+  }
+
+  /* =================== pantalla =================== */
+  function openScreen(){
+    if (!state.closed) return Promise.resolve();
+    state.closed = false; syncScreenBtn();
+    return tween("screen", state.screen, SCREEN_OPEN, reduced ? 0 : 640, easeInOutCubic,
+      v => { state.screen = v; render(); })
+      .then(() => { state.screen = SCREEN_OPEN; render(); });
+  }
+
+  function closeScreen(){
+    if (state.closed) return Promise.resolve();
+    state.closed = true; syncScreenBtn();
+    return tween("screen", state.screen, SCREEN_CLOSED, reduced ? 0 : 640, easeInOutCubic,
+      v => { state.screen = v; render(); })
+      .then(() => { state.screen = SCREEN_CLOSED; render(); });
+  }
+
+  function toggleScreen(){
+    if (state.busy || screenDrag) return;
+    state.closed ? openScreen() : closeScreen();
+  }
+
+  /* la manija arrastra la pantalla en círculo, como el disco real */
+  const HANDLE_ANGLE = -90;   // ángulo del dial: la manija queda a la izquierda del disco
+
+  function screenFromAngle(deg){
+    // 0 = manija a la izquierda (pantalla abierta), 180 = a la derecha (cerrada)
+    let r = (deg - HANDLE_ANGLE + 720) % 360;
+    // el semicírculo de abajo no es recorrible: vamos al extremo más cercano
+    if (r > 180) r = r >= 270 ? SCREEN_OPEN : SCREEN_CLOSED;
+    return r;
+  }
+
+  screenEl.addEventListener("pointerdown", evt => {
+    if (state.busy || !evt.target.closest("#handle")) return;
+    evt.stopPropagation();
+    evt.preventDefault();
+    anims.screen?.cancel();
+    screenDrag = true;
+    screenEl.classList.add("is-dragging");
+    try { screenEl.setPointerCapture(evt.pointerId); } catch {}
+    dragOffset = 0;
+    const a = angleAt(evt, 40);
+    if (a !== null){
+      dragOffset = state.screen + HANDLE_ANGLE - a;
+      state.screen = screenFromAngle(a + dragOffset);
+      render();
+    }
+  });
+
+  screenEl.addEventListener("pointermove", evt => {
+    if (!screenDrag) return;
+    const a = angleAt(evt, 40);
+    if (a !== null){
+      const next = screenFromAngle(a + dragOffset);
+      if (next !== state.screen){ state.screen = next; render(); }
+    }
+    evt.preventDefault();
+  });
+
+  const endScreenDrag = evt => {
+    if (!screenDrag) return;
+    screenDrag = false;
+    screenEl.classList.remove("is-dragging");
+    try { screenEl.releasePointerCapture(evt.pointerId); } catch {}
+
+    // usamos la posición final del puntero, no solo el último move
+    if (evt.type === "pointerup"){
+      const a = angleAt(evt, 40);
+      if (a !== null) state.screen = screenFromAngle(a + dragOffset);
+    }
+
+    const target = state.screen < 90 ? SCREEN_OPEN : SCREEN_CLOSED;
+    state.closed = target === SCREEN_CLOSED;
+    syncScreenBtn();
+
+    if (Math.abs(state.screen - target) < 0.01){
+      state.screen = target;
+      render();
+      return;
+    }
+    tween("screen", state.screen, target, reduced ? 0 : 220, easeOutCubic,
+      v => { state.screen = v; render(); })
+      .then(() => { state.screen = target; render(); });
+  };
+  screenEl.addEventListener("pointerup", endScreenDrag);
+  screenEl.addEventListener("pointercancel", endScreenDrag);
+
+  /* =================== girar =================== */
+  function randTarget(){
+    const limit = ARC - 6;   // el centro del objetivo siempre queda visible
+    return (Math.random() * 2 - 1) * limit;
+  }
+
+  async function spin(){
+    if (state.busy) return;
+    state.busy = true; spinBtn.disabled = true;
+
+    if (!state.closed) await closeScreen();
+
+    const target = randTarget();
+    const turns  = 2 + (Math.random() < .5 ? 0 : 1);
+    const to = target + 360 * turns;
+
+    rimEl.classList.add("is-spinning");
+
+    await tween("wheel", state.wheel, to, reduced ? 620 : 1400,
+      reduced ? easeOutCubic : easeOutQuint,
+      v => { state.wheel = v; render(); });
+
+    rimEl.classList.remove("is-spinning");
+
+    if (!reduced){
+      // pequeño rebote de retén al frenar
+      await tween("wheel", to, to + 3.2, 120, easeOutCubic,
+        v => { state.wheel = v; render(); });
+      await tween("wheel", to + 3.2, to, 230, easeInOutCubic,
+        v => { state.wheel = v; render(); });
+    }
+
+    state.wheel = ((to % 360) + 360) % 360;
+    render();
+
+    state.busy = false; spinBtn.disabled = false;
+  }
+
+  /* =================== aguja =================== */
+  function setPointer(deg){
+    const lim = POINTER_LIMIT;
+    state.pointer = Math.max(-lim, Math.min(lim, deg));
+    render();
+  }
+
+  function angleAt(evt, minR = 54){
+    const m = svg.getScreenCTM();
+    if (!m) return null;
+    const p = svg.createSVGPoint();
+    p.x = evt.clientX; p.y = evt.clientY;
+    const q = p.matrixTransform(m.inverse());
+    const dx = q.x - CX, dy = q.y - CY;
+    if (Math.hypot(dx, dy) < minR) return null;
+    return Math.atan2(dx, -dy) * 180 / Math.PI;
+  }
+
+  let dragging = false;
+
+  svg.addEventListener("pointerdown", evt => {
+    if (evt.target.closest("#handle")) return;
+    const a = angleAt(evt);
+    if (a === null) return;
+    dragging = true;
+    svg.classList.add("is-dragging");
+    try { svg.setPointerCapture(evt.pointerId); } catch {}
+    setPointer(a);
+    evt.preventDefault();
+  });
+
+  svg.addEventListener("pointermove", evt => {
+    if (!dragging) return;
+    const a = angleAt(evt);
+    if (a !== null) setPointer(a);
+    evt.preventDefault();
+  });
+
+  const endDrag = evt => {
+    if (!dragging) return;
+    dragging = false;
+    svg.classList.remove("is-dragging");
+    try { svg.releasePointerCapture(evt.pointerId); } catch {}
+  };
+  svg.addEventListener("pointerup", endDrag);
+  svg.addEventListener("pointercancel", endDrag);
+
+  /* =================== palanca de ancho de zonas =================== */
+  const leverEl = document.getElementById("lever");
+  const MIN_SCALE = 0.5, MAX_SCALE = 1.3;   // 50 % … 130 % del ancho base
+  // Ojo: tienen que coincidir con .lever__slot (top/bottom) y .lever__handle (height) del CSS.
+  const LEVER_INSET = 24, HANDLE_H = 46;
+
+  function applyScale(scale, persist){
+    zoneScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
+    const t = (zoneScale - MIN_SCALE) / (MAX_SCALE - MIN_SCALE);
+    leverEl.style.setProperty("--t", t.toFixed(4));
+    leverEl.setAttribute("aria-valuenow", String(Math.round(zoneScale * 100)));
+    leverEl.setAttribute("aria-valuetext", `Zonas al ${Math.round(zoneScale * 100)} % de ancho`);
+    buildWheel();
+    if (persist){
+      try { localStorage.setItem("wl.zoneScale", String(zoneScale)); } catch (_) {}
+    }
+  }
+
+  function scaleFromPointer(evt){
+    const r = leverEl.getBoundingClientRect();
+    const minY = LEVER_INSET + HANDLE_H / 2;
+    const maxY = r.height - minY;
+    const y = Math.min(maxY, Math.max(minY, evt.clientY - r.top));
+    const t = 1 - (y - minY) / (maxY - minY);
+    applyScale(MIN_SCALE + t * (MAX_SCALE - MIN_SCALE), true);
+  }
+
+  let leverDrag = false;
+
+  leverEl.addEventListener("pointerdown", evt => {
+    leverDrag = true;
+    try { leverEl.setPointerCapture(evt.pointerId); } catch {}
+    leverEl.focus({ preventScroll:true });
+    scaleFromPointer(evt);
+    evt.preventDefault();
+  });
+  leverEl.addEventListener("pointermove", evt => {
+    if (!leverDrag) return;
+    scaleFromPointer(evt);
+    evt.preventDefault();
+  });
+  const leverUp = evt => {
+    if (!leverDrag) return;
+    leverDrag = false;
+    try { leverEl.releasePointerCapture(evt.pointerId); } catch {}
+  };
+  leverEl.addEventListener("pointerup", leverUp);
+  leverEl.addEventListener("pointercancel", leverUp);
+
+  leverEl.addEventListener("keydown", evt => {
+    const step = 4;
+    const v = Math.round(zoneScale * 100);
+    switch (evt.key){
+      case "ArrowUp": case "ArrowRight": applyScale((v + step) / 100, true); evt.preventDefault(); break;
+      case "ArrowDown": case "ArrowLeft": applyScale((v - step) / 100, true); evt.preventDefault(); break;
+      case "Home": applyScale(MIN_SCALE, true); evt.preventDefault(); break;
+      case "End": applyScale(MAX_SCALE, true); evt.preventDefault(); break;
+    }
+  });
+
+  /* =================== teclado / botones =================== */
+  spinBtn.addEventListener("click", spin);
+  screenBtn.addEventListener("click", toggleScreen);
+
+  document.addEventListener("keydown", evt => {
+    if (evt.target.closest && evt.target.closest("#lever")) return;
+    if (evt.key === "ArrowLeft" || evt.key === "ArrowRight"){
+      const dir = evt.key === "ArrowRight" ? 1 : -1;
+      setPointer(state.pointer + dir * (evt.shiftKey ? STEP * 10 : STEP));
+      evt.preventDefault();
+    } else if (evt.key === " " && evt.target === document.body){
+      evt.preventDefault();
+      toggleScreen();
+    }
+  });
+
+  /* =================== arranque =================== */
+  buildScreen();
+  buildFront();
+  render();
+  syncScreenBtn();
+
+  let saved = 0.85;
+  try {
+    const s = parseFloat(localStorage.getItem("wl.zoneScale"));
+    if (Number.isFinite(s)) saved = s;
+  } catch (_) {}
+  applyScale(saved, false);
+})();
+</script>
+</body>
+</html>
